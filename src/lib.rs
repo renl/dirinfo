@@ -3,7 +3,7 @@ use walkdir::{DirEntry, WalkDir};
 pub enum BlockSize {
     Kb100,
     Kb500,
-    Mb(u64),
+    Mb(usize),
 }
 
 #[derive(Debug)]
@@ -76,11 +76,11 @@ impl DirInfo {
         self
     }
 
-    pub fn file_size_distribution(&self, blocksize: BlockSize) -> Vec<u64> {
-        let blk: u64 = match blocksize {
-            BlockSize::Kb100 => 100_000u64,
-            BlockSize::Kb500 => 500_000u64,
-            BlockSize::Mb(x) => x * 1000_000u64,
+    pub fn get_file_size_distribution(&self, blocksize: BlockSize) -> Vec<usize> {
+        let blk: usize = match blocksize {
+            BlockSize::Kb100 => 100_000usize,
+            BlockSize::Kb500 => 500_000usize,
+            BlockSize::Mb(x) => x * 1000_000usize,
         };
         let biggest = if let Some(ref files) = self.files {
             files.into_iter().fold(0, |max, d| {
@@ -93,7 +93,7 @@ impl DirInfo {
         } else {
             0
         };
-        let mut distribution: Vec<u64> = vec![0; (biggest / blk) as usize + 1];
+        let mut distribution: Vec<usize> = vec![0; (biggest as usize / blk) + 1];
         if let Some(ref files) = self.files {
             files.into_iter().for_each(|f| {
                 distribution[f.metadata().unwrap().len() as usize / blk as usize] += 1
@@ -102,26 +102,26 @@ impl DirInfo {
         distribution
     }
 
-    pub fn total_files_size(&self) -> u64 {
+    pub fn get_files_size(&self) -> usize {
         match self.files {
             Some(ref files) => files
                 .iter()
-                .fold(0, |acc, s| acc + s.metadata().unwrap().len()),
+                .fold(0, |acc, s| acc + s.metadata().unwrap().len() as usize),
             _ => 0,
         }
     }
 
-    pub fn total_files_size_by_file_ext(&self, ext: &str) -> u64 {
+    pub fn get_files_size_by_file_ext(&self, ext: &str) -> usize {
         match self.files {
             Some(ref files) => files
                 .iter()
                 .filter(|f| f.file_name().to_str().unwrap().ends_with(ext))
-                .fold(0, |acc, f| acc + f.metadata().unwrap().len()),
+                .fold(0, |acc, f| acc + f.metadata().unwrap().len() as usize),
             _ => 0,
         }
     }
 
-    pub fn total_num_files_by_file_ext(&self, ext: &str) -> u64 {
+    pub fn get_num_files_by_file_ext(&self, ext: &str) -> usize {
         match self.files {
             Some(ref files) => files
                 .iter()
@@ -131,24 +131,24 @@ impl DirInfo {
         }
     }
 
-    pub fn total_hidden_files_size(&self) -> u64 {
+    pub fn get_hidden_files_size(&self) -> usize {
         match self.files {
             Some(ref files) => files
                 .iter()
                 .filter(|f| f.file_name().to_str().unwrap().starts_with("."))
-                .fold(0, |acc, f| acc + f.metadata().unwrap().len()),
+                .fold(0, |acc, f| acc + f.metadata().unwrap().len() as usize),
             _ => 0,
         }
     }
 
-    pub fn total_num_files(&self) -> u64 {
+    pub fn get_num_files(&self) -> usize {
         match self.files {
             Some(ref files) => files.iter().fold(0, |acc, _f| acc + 1),
             _ => 0,
         }
     }
 
-    pub fn total_num_hidden_files(&self) -> u64 {
+    pub fn get_num_hidden_files(&self) -> usize {
         match self.files {
             Some(ref files) => files
                 .iter()
@@ -158,14 +158,14 @@ impl DirInfo {
         }
     }
 
-    pub fn total_num_directories(&self) -> u64 {
+    pub fn get_num_directories(&self) -> usize {
         match self.directories {
             Some(ref directories) => directories.iter().fold(0, |acc, _f| acc + 1),
             _ => 0,
         }
     }
 
-    pub fn total_num_hidden_directories(&self) -> u64 {
+    pub fn get_num_hidden_directories(&self) -> usize {
         match self.directories {
             Some(ref directories) => directories
                 .iter()
@@ -175,12 +175,32 @@ impl DirInfo {
         }
     }
 
-    pub fn total_num_symlinks(&self) -> u64 {
+    pub fn get_num_symlinks(&self) -> usize {
         match self.symlinks {
             Some(ref symlinks) => symlinks.iter().fold(0, |acc, _f| acc + 1),
             _ => 0,
         }
     }
+
+    pub fn get_deepest_depth(&self) -> usize {
+        if let Some(ref files) = self.files {
+            files
+                .iter()
+                .fold(0, |max, d| if d.depth() > max { d.depth() } else { max })
+        } else {
+            0
+        }
+    }
+
+    pub fn get_num_files_by_depth(&self) {}
+
+    pub fn get_num_directories_by_depth(&self) {}
+
+    pub fn get_num_symlinks_by_depth(&self) {}
+
+    pub fn get_files_size_by_depth(&self) {}
+
+    pub fn get_hidden_files_size_by_depth(&self) {}
 
     fn all_directories(mut self) -> DirInfo {
         let mut entries: Vec<DirEntry> = Vec::new();
@@ -230,7 +250,9 @@ mod tests {
     fn distribution() {
         println!(
             "{:#?}",
-            DirInfo::new().pull(".").file_size_distribution(BlockSize::Kb100)
+            DirInfo::new()
+                .pull(".")
+                .get_file_size_distribution(BlockSize::Kb100)
         );
     }
 
@@ -244,25 +266,29 @@ mod tests {
     fn byabsolutepath() {
         println!(
             "{:#?}",
-            DirInfo::new().pull(std::env::current_dir().unwrap().to_str().unwrap()).files
+            DirInfo::new()
+                .pull(std::env::current_dir().unwrap().to_str().unwrap())
+                .files
         );
     }
 
     #[test]
     fn hiddenfilesize() {
-        println!("{}", DirInfo::new().pull("../..").total_hidden_files_size());
+        println!("{}", DirInfo::new().pull("../..").get_hidden_files_size());
     }
 
     #[test]
     fn hiddenfilenum() {
-        println!("{}", DirInfo::new().pull("../..").total_num_hidden_files());
+        println!("{}", DirInfo::new().pull("../..").get_num_hidden_files());
     }
 
     #[test]
     fn filesizebyext() {
         println!(
             "{}",
-            DirInfo::new().pull("/etc").total_files_size_by_file_ext(".conf")
+            DirInfo::new()
+                .pull("/etc")
+                .get_files_size_by_file_ext(".conf")
         );
     }
 
@@ -273,7 +299,7 @@ mod tests {
 
     #[test]
     fn filesize() {
-        println!("{}", DirInfo::new().pull("../..").total_files_size());
+        println!("{}", DirInfo::new().pull("../..").get_files_size());
     }
 
     #[test]
