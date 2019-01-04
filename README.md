@@ -9,5 +9,5 @@ and calculate the total file size in bytes for files with the extension ".conf"
 ```
 use dirinfo::DirInfo;
 
-println!("{}", DirInfo::new().pull("/etc").total_files_size_by_file_ext(".conf");
+println!("{}", DirInfo::new().pull("/etc").get_files_size_by_file_ext(".conf");
 ```
