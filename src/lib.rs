@@ -44,7 +44,7 @@ pub struct DirInfo {
 }
 
 impl DirInfo {
-    pub fn new(root: &str) -> DirInfo {
+    pub fn new() -> DirInfo {
         DirInfo {
             all: None,
             errors: None,
@@ -52,10 +52,13 @@ impl DirInfo {
             files: None,
             symlinks: None,
         }
-        .all(root)
-        .all_directories()
-        .all_files()
-        .all_symlinks()
+    }
+
+    pub fn pull(self, root_dir: &str) -> DirInfo {
+        self.all(root_dir)
+            .all_directories()
+            .all_files()
+            .all_symlinks()
     }
 
     fn all(mut self, root: &str) -> DirInfo {
@@ -82,7 +85,6 @@ impl DirInfo {
         let biggest = if let Some(ref files) = self.files {
             files.into_iter().fold(0, |max, d| {
                 if d.metadata().unwrap().len() > max {
-                    println!("{}", d.file_name().to_str().unwrap());
                     d.metadata().unwrap().len()
                 } else {
                     max
@@ -91,7 +93,6 @@ impl DirInfo {
         } else {
             0
         };
-        println!("Vec length is {}", (biggest / blk) as usize);
         let mut distribution: Vec<u64> = vec![0; (biggest / blk) as usize + 1];
         if let Some(ref files) = self.files {
             files.into_iter().for_each(|f| {
@@ -227,12 +228,15 @@ mod tests {
 
     #[test]
     fn distribution() {
-        println!("{:#?}", DirInfo::new(".").file_size_distribution(BlockSize::Kb100));
+        println!(
+            "{:#?}",
+            DirInfo::new().pull(".").file_size_distribution(BlockSize::Kb100)
+        );
     }
 
     #[test]
     fn splitfiles() {
-        let d = DirInfo::new("/etc");
+        let d = DirInfo::new().pull("/etc");
         println!("{:#?} ", d);
     }
 
@@ -240,36 +244,36 @@ mod tests {
     fn byabsolutepath() {
         println!(
             "{:#?}",
-            DirInfo::new(std::env::current_dir().unwrap().to_str().unwrap()).files
+            DirInfo::new().pull(std::env::current_dir().unwrap().to_str().unwrap()).files
         );
     }
 
     #[test]
     fn hiddenfilesize() {
-        println!("{}", DirInfo::new("../..").total_hidden_files_size());
+        println!("{}", DirInfo::new().pull("../..").total_hidden_files_size());
     }
 
     #[test]
     fn hiddenfilenum() {
-        println!("{}", DirInfo::new("../..").total_num_hidden_files());
+        println!("{}", DirInfo::new().pull("../..").total_num_hidden_files());
     }
 
     #[test]
     fn filesizebyext() {
         println!(
             "{}",
-            DirInfo::new("../..").total_files_size_by_file_ext(".toml")
+            DirInfo::new().pull("/etc").total_files_size_by_file_ext(".conf")
         );
     }
 
     #[test]
     fn dirinfonew() {
-        println!("{:#?}", DirInfo::new("../.."));
+        println!("{:#?}", DirInfo::new().pull("../.."));
     }
 
     #[test]
     fn filesize() {
-        println!("{}", DirInfo::new("../..").total_files_size());
+        println!("{}", DirInfo::new().pull("../..").total_files_size());
     }
 
     #[test]
