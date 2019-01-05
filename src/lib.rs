@@ -198,22 +198,52 @@ impl DirInfo {
         }
     }
 
+    fn entry_depth_distri(entries: &Vec<DirEntry>) -> Vec<u32> {
+        let deepest = Self::deepest_depth(entries);
+        let mut depth_distri = vec![0u32; deepest];
+        entries.iter().for_each(|f| {
+            if f.depth() > 0 {
+                depth_distri[f.depth() - 1] += 1
+            }
+        });
+        depth_distri
+    }
+
     pub fn get_num_files_by_depth(&self) -> Vec<u32> {
         if let Some(ref files) = self.files {
-            let deepest = Self::deepest_depth(files);
-            let mut depth_distri = vec![0u32; deepest];
-            files.iter().for_each(|f| depth_distri[f.depth() - 1] += 1);
-            depth_distri
+            Self::entry_depth_distri(files)
         } else {
             vec![0]
         }
     }
 
-    pub fn get_num_directories_by_depth(&self) {}
+    pub fn get_num_directories_by_depth(&self) -> Vec<u32> {
+        if let Some(ref directories) = self.directories {
+            Self::entry_depth_distri(directories)
+        } else {
+            vec![0]
+        }
+    }
 
-    pub fn get_num_symlinks_by_depth(&self) {}
+    pub fn get_num_symlinks_by_depth(&self) -> Vec<u32> {
+        if let Some(ref symlinks) = self.symlinks {
+            Self::entry_depth_distri(symlinks)
+        } else {
+            vec![0]
+        }
+    }
 
-    pub fn get_files_size_by_depth(&self) {}
+    pub fn get_files_size_by_depth(&self) -> Vec<usize> {
+        if let Some(ref files) = self.files {
+            let deepest = Self::deepest_depth(files);
+            files.iter().fold(vec![0usize; deepest], |mut acc, f| {
+                acc[f.depth() - 1] += f.metadata().unwrap().len() as usize;
+                acc
+            })
+        } else {
+            vec![0]
+        }
+    }
 
     pub fn get_hidden_files_size_by_depth(&self) {}
 

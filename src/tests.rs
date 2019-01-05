@@ -1,8 +1,23 @@
 use super::{BlockSize, DirInfo};
 
 #[test]
+fn filesizedistribydepth() {
+    println!("{:#?}", DirInfo::new().pull(".").get_files_size_by_depth());
+}
+
+#[test]
 fn distribydepthfiles() {
     println!("{:#?}", DirInfo::new().pull(".").get_num_files_by_depth());
+}
+
+#[test]
+fn distribydepthdirectories() {
+    println!("{:#?}", DirInfo::new().pull(".").get_num_directories_by_depth());
+}
+
+#[test]
+fn distribydepthsymlinks() {
+    println!("{:#?}", DirInfo::new().pull(".").get_num_symlinks_by_depth());
 }
 
 #[test]
