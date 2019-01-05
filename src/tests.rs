@@ -1,6 +1,16 @@
 use super::{BlockSize, DirInfo};
 
 #[test]
+fn numhiddenfilesdistribydepth() {
+    println!("{:#?}", DirInfo::new().pull(".").get_num_hidden_files_by_depth());
+}
+
+#[test]
+fn hiddenfilesizedistribydepth() {
+    println!("{:#?}", DirInfo::new().pull(".").get_hidden_files_size_by_depth());
+}
+
+#[test]
 fn filesizedistribydepth() {
     println!("{:#?}", DirInfo::new().pull(".").get_files_size_by_depth());
 }

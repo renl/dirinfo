@@ -46,6 +46,8 @@ pub struct DirInfo {
 }
 
 impl DirInfo {
+    /// Create a new empty DirInfo struct
+
     pub fn new() -> DirInfo {
         DirInfo {
             all: None,
@@ -55,6 +57,9 @@ impl DirInfo {
             symlinks: None,
         }
     }
+
+    /// Populate DirInfo fields with directory information pulled with root_dir arg
+    /// directory specifying the root directory to pull from
 
     pub fn pull(self, root_dir: &str) -> DirInfo {
         self.all(root_dir)
@@ -66,17 +71,17 @@ impl DirInfo {
     fn all(mut self, root: &str) -> DirInfo {
         let mut direntries: Vec<DirEntry> = Vec::new();
         let mut errors: Vec<Error> = Vec::new();
-        WalkDir::new(root).into_iter().for_each(|de| {
-            // println!("{:#?}", de);
-            match de {
-                Ok(d) => direntries.push(d),
-                Err(e) => errors.push(Error::from(e)),
-            }
+        WalkDir::new(root).into_iter().for_each(|de| match de {
+            Ok(d) => direntries.push(d),
+            Err(e) => errors.push(Error::from(e)),
         });
         self.all = Some(direntries);
         self.errors = Some(errors);
         self
     }
+
+    /// For all files found in the directory hierarchy, create a histogram of file
+    /// sizes with the bin size of histogram specified by blocksize arg
 
     pub fn get_file_size_distribution(&self, blocksize: BlockSize) -> Vec<usize> {
         let blk: usize = match blocksize {
@@ -104,6 +109,9 @@ impl DirInfo {
         distribution
     }
 
+    /// Calculate the total file size in bytes for all the files found in directory
+    /// hierarchy
+
     pub fn get_files_size(&self) -> usize {
         match self.files {
             Some(ref files) => files
@@ -112,6 +120,9 @@ impl DirInfo {
             _ => 0,
         }
     }
+
+    /// Calculate the total file size in bytes for all files with file extension
+    /// of ext arg found in directory hierarchy
 
     pub fn get_files_size_by_file_ext(&self, ext: &str) -> usize {
         match self.files {
@@ -123,6 +134,9 @@ impl DirInfo {
         }
     }
 
+    /// Calculate the total number of files with the extension specified by ext arg
+    /// found in directory hierarchy
+
     pub fn get_num_files_by_file_ext(&self, ext: &str) -> usize {
         match self.files {
             Some(ref files) => files
@@ -132,6 +146,9 @@ impl DirInfo {
             _ => 0,
         }
     }
+
+    /// Calculate the total file size in bytes for all hidden files found in directory
+    /// hierarchy
 
     pub fn get_hidden_files_size(&self) -> usize {
         match self.files {
@@ -143,12 +160,16 @@ impl DirInfo {
         }
     }
 
+    /// Calculate the total number of files found in directory hierarchy
+
     pub fn get_num_files(&self) -> usize {
         match self.files {
             Some(ref files) => files.iter().fold(0, |acc, _f| acc + 1),
             _ => 0,
         }
     }
+
+    /// Calculate the total number of hidden files found in directory hierarchy
 
     pub fn get_num_hidden_files(&self) -> usize {
         match self.files {
@@ -160,12 +181,17 @@ impl DirInfo {
         }
     }
 
+    /// Calculate the total number of sub directories found in directory hierarchy
+
     pub fn get_num_directories(&self) -> usize {
         match self.directories {
             Some(ref directories) => directories.iter().fold(0, |acc, _f| acc + 1),
             _ => 0,
         }
     }
+
+    /// Calculate the total number of hidden sub directories found in the directory
+    /// hierarchy
 
     pub fn get_num_hidden_directories(&self) -> usize {
         match self.directories {
@@ -176,6 +202,8 @@ impl DirInfo {
             _ => 0,
         }
     }
+
+    /// Calculate the total number of symbolic links found in the directory hierarchy
 
     pub fn get_num_symlinks(&self) -> usize {
         match self.symlinks {
@@ -189,6 +217,8 @@ impl DirInfo {
             .iter()
             .fold(0, |max, d| if d.depth() > max { d.depth() } else { max })
     }
+
+    /// Identify maximum depth of directory hierarchy
 
     pub fn get_deepest_depth(&self) -> usize {
         if let Some(ref files) = self.files {
@@ -209,6 +239,8 @@ impl DirInfo {
         depth_distri
     }
 
+    /// Calculate distribution of number of files by depth level in directory hierarchy
+
     pub fn get_num_files_by_depth(&self) -> Vec<u32> {
         if let Some(ref files) = self.files {
             Self::entry_depth_distri(files)
@@ -216,6 +248,9 @@ impl DirInfo {
             vec![0]
         }
     }
+
+    /// Calculate distribution of number of sub directories by depth level in directory
+    /// hierarchy
 
     pub fn get_num_directories_by_depth(&self) -> Vec<u32> {
         if let Some(ref directories) = self.directories {
@@ -225,6 +260,9 @@ impl DirInfo {
         }
     }
 
+    /// Calculate distribution of number of symbolic links by depth level in directory
+    /// hierarchy
+
     pub fn get_num_symlinks_by_depth(&self) -> Vec<u32> {
         if let Some(ref symlinks) = self.symlinks {
             Self::entry_depth_distri(symlinks)
@@ -232,6 +270,8 @@ impl DirInfo {
             vec![0]
         }
     }
+
+    /// Calculate distribution of file size by depth level in directory hierarchy
 
     pub fn get_files_size_by_depth(&self) -> Vec<usize> {
         if let Some(ref files) = self.files {
@@ -245,7 +285,42 @@ impl DirInfo {
         }
     }
 
-    pub fn get_hidden_files_size_by_depth(&self) {}
+    /// Calculate distribution of hidden file size by depth level in directory hierarchy
+
+    pub fn get_hidden_files_size_by_depth(&self) -> Vec<usize> {
+        if let Some(ref files) = self.files {
+            let deepest = Self::deepest_depth(files);
+            files.iter().fold(vec![0usize; deepest], |mut acc, f| {
+                if f.file_name().to_str().unwrap().starts_with(".") {
+                    acc[f.depth() - 1] += f.metadata().unwrap().len() as usize;
+                }
+                acc
+            })
+        } else {
+            vec![0]
+        }
+    }
+
+    /// Calculate distribution of number of hidden files by depth level in directory
+    /// hierarchy
+
+    pub fn get_num_hidden_files_by_depth(&self) -> Vec<u32> {
+        if let Some(ref files) = self.files {
+            let deepest = Self::deepest_depth(files);
+            let mut depth_distri = vec![0u32; deepest];
+            files
+                .iter()
+                .filter(|f| f.file_name().to_str().unwrap().starts_with("."))
+                .for_each(|f| {
+                    if f.depth() > 0 {
+                        depth_distri[f.depth() - 1] += 1
+                    }
+                });
+            depth_distri
+        } else {
+            vec![0]
+        }
+    }
 
     fn all_directories(mut self) -> DirInfo {
         let mut entries: Vec<DirEntry> = Vec::new();
