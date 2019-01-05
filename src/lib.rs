@@ -1,4 +1,6 @@
 use walkdir::{DirEntry, WalkDir};
+#[cfg(test)]
+mod tests;
 
 pub enum BlockSize {
     Kb100,
@@ -182,17 +184,30 @@ impl DirInfo {
         }
     }
 
+    fn deepest_depth(files: &Vec<DirEntry>) -> usize {
+        files
+            .iter()
+            .fold(0, |max, d| if d.depth() > max { d.depth() } else { max })
+    }
+
     pub fn get_deepest_depth(&self) -> usize {
         if let Some(ref files) = self.files {
-            files
-                .iter()
-                .fold(0, |max, d| if d.depth() > max { d.depth() } else { max })
+            Self::deepest_depth(files)
         } else {
             0
         }
     }
 
-    pub fn get_num_files_by_depth(&self) {}
+    pub fn get_num_files_by_depth(&self) -> Vec<u32> {
+        if let Some(ref files) = self.files {
+            let deepest = Self::deepest_depth(files);
+            let mut depth_distri = vec![0u32; deepest];
+            files.iter().for_each(|f| depth_distri[f.depth() - 1] += 1);
+            depth_distri
+        } else {
+            vec![0]
+        }
+    }
 
     pub fn get_num_directories_by_depth(&self) {}
 
@@ -239,84 +254,5 @@ impl DirInfo {
             self.symlinks = Some(entries);
         }
         self
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn distribution() {
-        println!(
-            "{:#?}",
-            DirInfo::new()
-                .pull(".")
-                .get_file_size_distribution(BlockSize::Kb100)
-        );
-    }
-
-    #[test]
-    fn splitfiles() {
-        let d = DirInfo::new().pull("/etc");
-        println!("{:#?} ", d);
-    }
-
-    #[test]
-    fn byabsolutepath() {
-        println!(
-            "{:#?}",
-            DirInfo::new()
-                .pull(std::env::current_dir().unwrap().to_str().unwrap())
-                .files
-        );
-    }
-
-    #[test]
-    fn hiddenfilesize() {
-        println!("{}", DirInfo::new().pull("../..").get_hidden_files_size());
-    }
-
-    #[test]
-    fn hiddenfilenum() {
-        println!("{}", DirInfo::new().pull("../..").get_num_hidden_files());
-    }
-
-    #[test]
-    fn filesizebyext() {
-        println!(
-            "{}",
-            DirInfo::new()
-                .pull("/etc")
-                .get_files_size_by_file_ext(".conf")
-        );
-    }
-
-    #[test]
-    fn dirinfonew() {
-        println!("{:#?}", DirInfo::new().pull("../.."));
-    }
-
-    #[test]
-    fn filesize() {
-        println!("{}", DirInfo::new().pull("../..").get_files_size());
-    }
-
-    #[test]
-    fn scratchpad() {
-        let a = Some(Some(String::from("hello")));
-        let mut z = Vec::<String>::new();
-        if let Some(ref b) = a {
-            if let Some(c) = b {
-                z.push(c.to_string());
-            }
-        }
-        println!("{:?}", a);
-
-        let i = 32874;
-        let j = i as f32 / 100f32;
-        let k: u32 = i / 100;
-
-        println!("{} {}", j, k);
     }
 }
