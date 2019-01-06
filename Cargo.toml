@@ -3,6 +3,9 @@ name = "dirinfo"
 version = "0.1.0"
 authors = ["Ng Cheng Leong <renlore@hotmail.com>"]
 edition = "2018"
+description = "Crate dirinfo provides easy to use API for collecting various information about a directory hierarchy"
+repository = "https://github.com/renl/dirinfo"
+license = "MIT"
 
 [dependencies]
 walkdir = "2"
